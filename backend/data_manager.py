@@ -1,17 +1,48 @@
 # backend/data_manager.py
 import pyodbc
+import socket  # <--- Importante: Importamos librería para detectar el PC
 
 class TechStoreDB:
     def __init__(self):
-        # CONFIGURACIÓN: Ajusta tu servidor aquí
-        self.server = "MiniPC"  
         self.driver = "{ODBC Driver 17 for SQL Server}"
         
+        # --- AUTO-DETECCIÓN DE SERVIDOR ---
+        # 1. Obtenemos el nombre real de la máquina
+        self.hostname = socket.gethostname()
+        
+        # 2. Configuración inteligente
+        # Si tus máquinas se llaman exactamente "LAPTOP" y "MiniPC" a nivel de sistema,
+        # esto funcionará directo. Si tienen nombres como "DESKTOP-8293", 
+        # puedes mapearlos en este diccionario:
+        server_mapping = {
+            # "NombreRealDeTuPC": "NombreInstanciaSQL"
+            "LAPTOP": "LAPTOP",
+            "MiniPC": "MiniPC"
+        }
+        
+        # Usamos el mapeo si existe, si no, intentamos conectar al hostname tal cual
+        self.server = server_mapping.get(self.hostname, self.hostname)
+        
+        print(f"[TechStoreDB] Equipo detectado: {self.hostname} -> Servidor SQL: {self.server}")
+
         # Mapeo de Nombres amigables a Bases de Datos reales
         self.nodos = {
             "Sede Guayaquil (02)": {"db": "TechStore_Guayaquil", "id": 2},
             "Matriz Quito (01)":   {"db": "TechStore_Quito", "id": 1}
         }
+
+    def get_current_node_default(self):
+        """
+        Retorna el nombre de la sede sugerida según la PC en la que estás.
+        Útil para pre-seleccionar el ComboBox en el Frontend.
+        """
+        if self.server == "LAPTOP":
+            return "Matriz Quito (01)"
+        elif self.server == "MiniPC":
+            return "Sede Guayaquil (02)"
+        
+        # Si no coincide, retornamos la primera opción disponible
+        return list(self.nodos.keys())[0]
 
     def get_connection(self, nombre_nodo):
         """Crea la conexión según el nodo seleccionado"""
@@ -33,7 +64,6 @@ class TechStoreDB:
         
         try:
             cursor = conn.cursor()
-            # La lógica SQL se queda aquí, limpia y oculta del frontend
             query = """
                 SELECT P.Id_producto, P.nombre, P.marca, P.precio, I.cantidad 
                 FROM PRODUCTO P
@@ -90,45 +120,34 @@ class TechStoreDB:
             conn.close()
 
     def obtener_clientes(self, nombre_nodo):
-        """Obtiene la lista de clientes de la sede"""
         conn = self.get_connection(nombre_nodo)
         sucursal_id = self.get_sucursal_id(nombre_nodo)
         try:
             cursor = conn.cursor()
-            # Filtramos por sucursal según tu esquema de fragmentación
             cursor.execute("SELECT Id_cliente, nombre, correo, telefono FROM CLIENTE WHERE Id_sucursal = ?", (sucursal_id,))
             return cursor.fetchall()
         finally:
             conn.close()
 
     def obtener_empleados(self, nombre_nodo):
-        """Obtiene la lista de empleados (Sin datos sensibles)"""
         conn = self.get_connection(nombre_nodo)
         sucursal_id = self.get_sucursal_id(nombre_nodo)
         try:
             cursor = conn.cursor()
-            # CORRECCIÓN: Quitamos 'cargo' de aquí porque Guayaquil no lo tiene
             cursor.execute("SELECT Id_empleado, nombre, correo, telefono FROM EMPLEADO WHERE Id_sucursal = ?", (sucursal_id,))
             return cursor.fetchall()
         finally:
             conn.close()
 
     def registrar_cliente(self, nombre_nodo, nombre, direccion, telefono, correo):
-        """Registra un nuevo cliente calculando el ID automáticamente"""
         conn = self.get_connection(nombre_nodo)
         sucursal_id = self.get_sucursal_id(nombre_nodo)
         
         try:
             cursor = conn.cursor()
-            
-            # 1. Calcular nuevo ID (Max + 1)
-            # Nota: En sistemas distribuidos reales, se suelen usar rangos de IDs 
-            # (ej: Guayaquil del 2000 al 2999) para evitar choques al replicar.
-            # Por simplicidad aquí, usamos MAX simple local.
             cursor.execute("SELECT ISNULL(MAX(Id_cliente), 0) + 1 FROM CLIENTE")
             new_id = cursor.fetchone()[0]
             
-            # 2. Insertar
             query = """
                 INSERT INTO CLIENTE (Id_cliente, nombre, direccion, telefono, correo, Id_sucursal)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -145,33 +164,18 @@ class TechStoreDB:
             conn.close()
 
     def registrar_producto(self, nombre_nodo, nombre, marca, precio, stock_inicial):
-        """
-        Crea un producto en el catálogo global y le asigna stock en la sede actual.
-        Transacción de 2 pasos.
-        """
         conn = self.get_connection(nombre_nodo)
         sucursal_id = self.get_sucursal_id(nombre_nodo)
         
         try:
             cursor = conn.cursor()
-            
-            # 1. Calcular nuevo ID de Producto
             cursor.execute("SELECT ISNULL(MAX(Id_producto), 0) + 1 FROM PRODUCTO")
             new_id_prod = cursor.fetchone()[0]
             
-            # 2. Insertar en Catálogo Global (PRODUCTO)
-            query_prod = """
-                INSERT INTO PRODUCTO (Id_producto, nombre, marca, precio)
-                VALUES (?, ?, ?, ?)
-            """
+            query_prod = "INSERT INTO PRODUCTO (Id_producto, nombre, marca, precio) VALUES (?, ?, ?, ?)"
             cursor.execute(query_prod, (new_id_prod, nombre, marca, float(precio)))
             
-            # 3. Insertar en Inventario Local (INVENTARIO)
-            # Aquí vinculamos el producto nuevo con la sucursal conectada
-            query_inv = """
-                INSERT INTO INVENTARIO (Id_sucursal, Id_producto, cantidad)
-                VALUES (?, ?, ?)
-            """
+            query_inv = "INSERT INTO INVENTARIO (Id_sucursal, Id_producto, cantidad) VALUES (?, ?, ?)"
             cursor.execute(query_inv, (sucursal_id, new_id_prod, int(stock_inicial)))
             
             conn.commit()
