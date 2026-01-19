@@ -1,0 +1,12 @@
+# .gitignore
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+venv/
+.idea/
+.vscode/
+*.tmp
+build.py
+test/
