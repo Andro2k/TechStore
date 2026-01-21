@@ -156,15 +156,17 @@ STYLES = {
             border: none;
             border-radius: 6px;
             text-align: left;
-            padding: 4px; 
-            margin: 2px 0px;
+            padding: 8px;
+            font-weight: 500;
         }}
         QPushButton:hover {{
             background-color: {Palette.Bg_Hover};
+            color: {Palette.Text_Primary};
         }}
         QPushButton:checked {{
             background-color: {Palette.Bg_Active};
-            color: {Palette.Text_Primary};
+            color: {Palette.Success};
+            border-left: 3px solid {Palette.Success}; /* Detalle visual bonito */
         }}
     """,
     

@@ -19,39 +19,60 @@ class TechStoreWindow(QMainWindow):
         self.resize(1100, 700)
         self.setStyleSheet(get_main_stylesheet())
 
-        # Contenedor Principal
         main_container = QWidget()
         self.setCentralWidget(main_container)
         
-        # Layout Horizontal (Sidebar | Stack)
         main_layout = QHBoxLayout(main_container)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # 1. SIDEBAR
-        self.sidebar = Sidebar(self.node_info["tables"], self.node_info)
+        # --- 1. DEFINICIÓN DE GRUPOS ---
+        # Definimos la estructura ideal
+        full_groups = {
+            "Recursos Humanos": ["EMPLEADO", "SUCURSAL"],
+            "Logística":        ["PRODUCTO", "INVENTARIO"],
+            "Facturación":      ["FACTURA", "DETALLE_FACTURA"]
+        }
+
+        # --- 2. FILTRADO POR PERMISOS ---
+        # Creamos la estructura final solo con las tablas que este nodo tiene permitidas
+        allowed_tables = self.node_info["tables"]
+        final_menu_structure = {}
+
+        for group, tables in full_groups.items():
+            # Filtramos: Solo tablas que existen en 'allowed_tables'
+            valid_tables = [t for t in tables if t in allowed_tables]
+            
+            # Si quedó alguna tabla válida en el grupo, lo añadimos al menú
+            if valid_tables:
+                final_menu_structure[group] = valid_tables
+        
+        # Cualquier tabla suelta que no pusimos en grupos (por si acaso)
+        grouped_tables = [t for sublist in final_menu_structure.values() for t in sublist]
+        orphans = [t for t in allowed_tables if t not in grouped_tables]
+        if orphans:
+            final_menu_structure["Otros"] = orphans
+
+        # --- 3. CREAR SIDEBAR CON GRUPOS ---
+        self.sidebar = Sidebar(final_menu_structure, self.node_info)
         self.sidebar.table_selected.connect(self.switch_page) 
         main_layout.addWidget(self.sidebar)
 
-        # 2. AREA DE CONTENIDO (QStackedWidget)
+        # 4. AREA DE CONTENIDO (Igual que antes)
         self.stack = QStackedWidget()
         self.stack.setObjectName("ContentArea") 
         
-        # --- GENERACIÓN DINÁMICA DE PÁGINAS ---
-        for table_name in self.node_info["tables"]:
+        # Generamos páginas para TODAS las tablas permitidas
+        for table_name in allowed_tables:
             page = TablePage(self.manager, table_name)
-            
             self.stack.addWidget(page)
             self.pages[table_name] = page
 
         main_layout.addWidget(self.stack)
 
-        # Cargar la primera página por defecto si existen tablas
-        if self.node_info["tables"]:
-            first_table = self.node_info["tables"][0]
-            self.switch_page(first_table)
-            # Opcional: Marcar visualmente el primer botón del sidebar
-            self.sidebar.buttons[0].setChecked(True) 
+        # Cargar la primera tabla válida por defecto
+        if allowed_tables:
+            self.switch_page(allowed_tables[0])
 
     def switch_page(self, table_name):
         """Cambia la página visible en el stack"""
