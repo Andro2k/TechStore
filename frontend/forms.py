@@ -1,6 +1,6 @@
 # frontend/forms.py
 
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QLineEdit, 
+from PyQt6.QtWidgets import (QComboBox, QDialog, QVBoxLayout, QLabel, QLineEdit, 
                              QHBoxLayout, QPushButton, QMessageBox, QDoubleSpinBox, QSpinBox)
 from PyQt6.QtCore import Qt, QRegularExpression
 from PyQt6.QtGui import QRegularExpressionValidator
@@ -40,14 +40,30 @@ class BaseForm(QDialog):
         self.inputs = {}     # Referencias a los widgets
         self.validators = {} # Reglas de validación: {'campo': 'digits'}
 
-    def add_input(self, label_text, field_name, input_type="text", required=True, validation_rule=None):
+    def add_input(self, label_text, field_name, input_type="text", required=True, validation_rule=None, options=None):
         """
         validation_rule: 'digits' (solo números), 'email' (formato correo), None (texto libre)
         """
         lbl = QLabel(label_text + (" *" if required else ""))
         
         widget = None
-        if input_type == "text":
+        # --- NUEVA LÓGICA PARA COMBOBOX ---
+        if input_type == "combo":
+            widget = QComboBox()
+            widget.setStyleSheet(f"""
+                QComboBox {{
+                    background-color: {Palette.Bg_Surface};
+                    border: 1px solid {Palette.Border_Light};
+                    border-radius: 6px;
+                    padding: 6px;
+                    color: {Palette.Text_Primary};
+                }}
+            """)
+            # Llenamos el combo con los datos (Texto, ID)
+            if options:
+                for text, data in options:
+                    widget.addItem(str(text), data)
+        elif input_type == "text":
             widget = QLineEdit()
             widget.setPlaceholderText(f"Ingrese {label_text.lower()}...")
             # Conectamos la validación en tiempo real
@@ -74,6 +90,8 @@ class BaseForm(QDialog):
             "rule": validation_rule,
             "type": input_type
         }
+
+        pass
 
     def validate_field(self, field_name):
         """Valida un campo específico y cambia su color"""
@@ -168,25 +186,79 @@ class BaseForm(QDialog):
                 data[name] = widget.text().strip()
             elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
                 data[name] = widget.value()
+            elif isinstance(widget, QComboBox):
+                data[name] = widget.currentData() 
         return data
 
+    def set_input_value(self, field_name, value, readonly=False):
+        """Asigna valor a un campo y permite bloquearlo (Solo Lectura)"""
+        if field_name in self.inputs:
+            widget = self.inputs[field_name]
+            
+            # 1. Lógica para Cajas de Texto (QLineEdit)
+            if isinstance(widget, QLineEdit):
+                widget.setText(str(value))
+                if readonly:
+                    widget.setReadOnly(True)
+            
+            # 2. Lógica para Números (SpinBox)
+            elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+                # Convertir a int o float según corresponda para evitar errores
+                val = float(value) if isinstance(widget, QDoubleSpinBox) else int(value)
+                widget.setValue(val)
+                if readonly:
+                    widget.setReadOnly(True)
+                    widget.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons) # Ocultar flechas
+
+            # 3. Estilo visual para campos bloqueados (Grisáceo)
+            if readonly:
+                widget.setStyleSheet(f"""
+                    background-color: {Palette.Bg_Main}; 
+                    color: {Palette.Text_Tertiary};
+                    border: 1px solid {Palette.Border_Light};
+                    font-weight: bold;
+                    padding: 8px;
+                    border-radius: 6px;
+                """)
+                
+    def populate_data(self, data_dict):
+        """Rellena el formulario con datos existentes (para editar)"""
+        for field_name, value in data_dict.items():
+            if field_name in self.inputs:
+                widget = self.inputs[field_name]
+                
+                if isinstance(widget, QLineEdit):
+                    widget.setText(str(value))
+                elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+                    # Manejo seguro de números
+                    try:
+                        val = float(value) if isinstance(widget, QDoubleSpinBox) else int(value)
+                        widget.setValue(val)
+                    except:
+                        pass
+                elif isinstance(widget, QComboBox):
+                    # Buscar el ID en el combo y seleccionarlo
+                    index = widget.findData(value)
+                    if index >= 0:
+                        widget.setCurrentIndex(index)
 # ==========================================
 # FORMULARIOS ESPECÍFICOS
 # ==========================================
 
 class EmployeeForm(BaseForm):
-    def __init__(self, parent=None):
+    # Añadimos el argumento 'sucursales_list' al init
+    def __init__(self, parent=None, sucursales_list=None):
         super().__init__(parent, "Nuevo Empleado")
         
         self.add_input("ID Empleado", "Id_empleado", "number", required=True)
         self.add_input("Nombre Completo", "nombre", required=True)
         self.add_input("Dirección", "direccion", required=True)
-        
-        # AQUÍ ESTÁ LA MAGIA DEL TELÉFONO: validation_rule="digits"
         self.add_input("Teléfono", "telefono", required=True, validation_rule="digits")
+        self.add_input("Correo Electrónico", "correo", required=False)
         
-        self.add_input("Correo Electrónico", "correo", required=False) # Correo opcional
-        self.add_input("ID Sucursal", "id_sucursal", "number", required=True) 
+        # --- AQUÍ USAMOS EL COMBO ---
+        # sucursales_list debe ser [("Sucursal Norte", 1), ("Sucursal Sur", 2)]
+        self.add_input("Sucursal", "id_sucursal", "combo", required=True, options=sucursales_list)
         
         self.layout.addStretch()
         self.add_buttons(self.accept)
@@ -199,6 +271,19 @@ class ProductForm(BaseForm):
         self.add_input("Nombre del Producto", "nombre", required=True)
         self.add_input("Marca", "marca", required=True)
         self.add_input("Precio", "precio", "money", required=True)
+        
+        self.layout.addStretch()
+        self.add_buttons(self.accept)
+
+class SucursalForm(BaseForm):
+    def __init__(self, parent=None):
+        super().__init__(parent, "Nueva Sucursal")
+        
+        self.add_input("ID Sucursal", "id_sucursal", "number", required=True)
+        self.add_input("Nombre", "nombre", required=True)
+        self.add_input("Dirección", "direccion", required=True)
+        self.add_input("Teléfono", "telefono", required=True, validation_rule="digits")
+        self.add_input("Ciudad", "ciudad", required=True)
         
         self.layout.addStretch()
         self.add_buttons(self.accept)

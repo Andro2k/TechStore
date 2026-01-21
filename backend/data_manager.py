@@ -104,5 +104,67 @@ class DataManager:
             print(f"Error insertando: {e}")
             conn.close()
             raise e
+        
+    def get_next_id(self, table_name, id_column):
+        """
+        Obtiene el siguiente ID disponible (MAX + 1).
+        Si la tabla está vacía, devuelve 1.
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Consultamos el valor máximo actual
+            query = f"SELECT MAX({id_column}) FROM {table_name}"
+            cursor.execute(query)
+            row = cursor.fetchone()
+            
+            max_id = row[0]
+            
+            # Si devuelve None (tabla vacía), el siguiente es 1.
+            # Si devuelve un número, el siguiente es n + 1.
+            next_id = (max_id + 1) if max_id is not None else 1
+            
+            return next_id
+        except Exception as e:
+            print(f"Error calculando next_id: {e}")
+            return 1 # Fallback seguro
+        finally:
+            conn.close()
     
-    
+    def delete_data(self, table_name, id_column, id_value):
+        """Elimina un registro específico"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        query = f"DELETE FROM {table_name} WHERE {id_column} = ?"
+        try:
+            cursor.execute(query, (id_value,))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error borrando: {e}")
+            raise e
+        finally:
+            conn.close()
+
+    def update_data(self, table_name, data_dict, id_column, id_value):
+        """Actualiza un registro existente"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        # Generar SQL: "UPDATE tabla SET col1=?, col2=? WHERE id=?"
+        set_clause = ", ".join([f"{k} = ?" for k in data_dict.keys()])
+        values = list(data_dict.values())
+        values.append(id_value) # El ID va al final para el WHERE
+        
+        query = f"UPDATE {table_name} SET {set_clause} WHERE {id_column} = ?"
+        
+        try:
+            cursor.execute(query, values)
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error actualizando: {e}")
+            raise e
+        finally:
+            conn.close()

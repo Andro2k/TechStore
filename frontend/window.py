@@ -23,7 +23,7 @@ class TechStoreWindow(QMainWindow):
         self.setCentralWidget(main_container)
         
         main_layout = QHBoxLayout(main_container)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setContentsMargins(0,5,0,5)
         main_layout.setSpacing(0)
 
         # --- 1. DEFINICIÓN DE GRUPOS ---
@@ -35,15 +35,12 @@ class TechStoreWindow(QMainWindow):
         }
 
         # --- 2. FILTRADO POR PERMISOS ---
-        # Creamos la estructura final solo con las tablas que este nodo tiene permitidas
         allowed_tables = self.node_info["tables"]
         final_menu_structure = {}
 
         for group, tables in full_groups.items():
-            # Filtramos: Solo tablas que existen en 'allowed_tables'
             valid_tables = [t for t in tables if t in allowed_tables]
             
-            # Si quedó alguna tabla válida en el grupo, lo añadimos al menú
             if valid_tables:
                 final_menu_structure[group] = valid_tables
         
@@ -62,9 +59,15 @@ class TechStoreWindow(QMainWindow):
         self.stack = QStackedWidget()
         self.stack.setObjectName("ContentArea") 
         
-        # Generamos páginas para TODAS las tablas permitidas
+        EDITABLE_TABLES = ["EMPLEADO", "PRODUCTO", "SUCURSAL"] 
+
         for table_name in allowed_tables:
-            page = TablePage(self.manager, table_name)
+            # Determinamos si esta tabla específica lleva controles
+            has_controls = (table_name in EDITABLE_TABLES)
+
+            # Pasamos el True/False al crear la página
+            page = TablePage(self.manager, table_name, enable_actions=has_controls)
+            
             self.stack.addWidget(page)
             self.pages[table_name] = page
 

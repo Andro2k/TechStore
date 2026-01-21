@@ -1,7 +1,7 @@
 # frontend/pages/base_page.py
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, 
+    QDoubleSpinBox, QSpinBox, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, 
     QTableWidgetItem, QHeaderView, QMessageBox, QLineEdit, 
     QComboBox, QPushButton, QFrame
 )
@@ -26,6 +26,7 @@ class BasePage(QWidget):
         self.table = QTableWidget()
         self.table.setAlternatingRowColors(False)
         self.table.verticalHeader().setVisible(False)
+        self.table.verticalHeader().setDefaultSectionSize(30)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         
@@ -45,7 +46,7 @@ class BasePage(QWidget):
     def _setup_top_bar(self):
         # ... (Tu código anterior del frame y layout) ...
         top_frame = QFrame()
-        top_frame.setFixedHeight(50)
+        top_frame.setFixedHeight(48)
         top_frame.setStyleSheet(STYLES["top_bar"])
         top_layout = QHBoxLayout(top_frame)
         top_layout.setContentsMargins(10,5,10,5)
@@ -62,16 +63,16 @@ class BasePage(QWidget):
         self.txt_search = QLineEdit()
         self.txt_search.setPlaceholderText("Buscar...")
         self.txt_search.setStyleSheet(STYLES["input_box"])
-        self.txt_search.setFixedWidth(250)
+        self.txt_search.setFixedWidth(210)
         self.txt_search.textChanged.connect(self.filter_data)
 
         # --- NUEVO BOTÓN AGREGAR ---
-        self.btn_add = QPushButton(" Nuevo") # Espacio para separar del icono si usas texto
-        # Si tienes un icono 'plus.svg', usa: self.btn_add.setIcon(get_icon("plus.svg"))
+        self.btn_add = QPushButton("Nuevo")
+        self.btn_add.setIcon(get_icon("plus.svg"))
         self.btn_add.setStyleSheet(STYLES["btn_primary"]) 
         self.btn_add.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_add.clicked.connect(self.on_add_click) # Conectamos a método vacío por defecto
-        self.btn_add.hide() # Lo ocultamos por defecto, lo mostramos solo en tablas permitidas
+        self.btn_add.clicked.connect(self.on_add_click)
+        self.btn_add.hide()
 
         # Botón Refresh
         btn_refresh = QPushButton()
@@ -83,7 +84,7 @@ class BasePage(QWidget):
 
         top_layout.addWidget(self.lbl_title)
         top_layout.addStretch()
-        top_layout.addWidget(self.btn_add) # <--- AÑADIR AQUI
+        top_layout.addWidget(self.btn_add)
         top_layout.addWidget(QLabel("Filtrar:"))
         top_layout.addWidget(self.combo_columns)
         top_layout.addWidget(self.txt_search)
@@ -100,8 +101,8 @@ class BasePage(QWidget):
 
     def load_data(self, table_name):
         """Carga datos y configura los filtros automáticamente"""
-        self.current_table = table_name # Guardamos referencia para el botón refresh
-        self.txt_search.clear()         # Limpiamos búsqueda anterior
+        self.current_table = table_name
+        self.txt_search.clear()
         
         try:
             columns, rows = self.manager.fetch_table_data(table_name)
@@ -116,14 +117,14 @@ class BasePage(QWidget):
                 for col_idx, data in enumerate(row_data):
                     val = str(data) if data is not None else ""
                     item = QTableWidgetItem(val)
-                    item.setToolTip(val) # Tooltip por si el texto es muy largo
+                    item.setToolTip(val)
                     self.table.setItem(row_idx, col_idx, item)
             
             self.lbl_status.setText(f"{len(rows)} registros cargados.")
 
             # 2. Configurar el ComboBox con las columnas reales
             self.combo_columns.clear()
-            self.combo_columns.addItem("Todo") # Opción para buscar en todas las columnas
+            self.combo_columns.addItem("Todo")
             self.combo_columns.addItems(columns)
             
         except Exception as e:
@@ -164,3 +165,32 @@ class BasePage(QWidget):
         # Actualizar estado
         visible_rows = row_count - hidden_count
         self.lbl_status.setText(f"Mostrando {visible_rows} de {row_count} registros.")
+    
+    def set_input_value(self, field_name, value, readonly=False):
+        """
+        Asigna un valor a un campo y opcionalmente lo bloquea
+        para que el usuario no pueda editarlo.
+        """
+        if field_name in self.inputs:
+            widget = self.inputs[field_name]
+            
+            # 1. Asignar valor según el tipo de widget
+            if isinstance(widget, QLineEdit):
+                widget.setText(str(value))
+                if readonly:
+                    widget.setReadOnly(True)
+            
+            elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+                widget.setValue(float(value) if isinstance(widget, QDoubleSpinBox) else int(value))
+                if readonly:
+                    widget.setReadOnly(True) # El usuario puede ver pero no cambiar
+                    widget.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons) # Ocultar flechitas
+
+            # 2. Estilo visual para campos "Solo Lectura"
+            if readonly:
+                widget.setStyleSheet(f"""
+                    background-color: {Palette.Bg_Main}; 
+                    color: {Palette.Text_Tertiary};
+                    border: 1px solid {Palette.Border_Light};
+                    font-weight: bold;
+                """)
