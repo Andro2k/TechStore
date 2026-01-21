@@ -16,7 +16,7 @@ class TechStoreWindow(QMainWindow):
 
     def init_ui(self):
         self.setWindowTitle(f"TechStore - {self.node_info['key']}")
-        self.resize(1100, 700)
+        self.resize(1200, 600)
         self.setStyleSheet(get_main_stylesheet())
 
         main_container = QWidget()

@@ -73,7 +73,7 @@ class Sidebar(QFrame):
         
         self.setObjectName("SidebarContainer")
         self.setStyleSheet(f"background-color: {Palette.Bg_Main};")
-        self.setFixedWidth(180) 
+        self.setFixedWidth(186) 
         
         self.child_buttons = []  
         
