@@ -9,11 +9,14 @@ import os
 def asset_url(filename: str) -> str:
     """Devuelve la ruta absoluta de un recurso para usar en QSS (CSS)."""
     if getattr(sys, 'frozen', False):
+        # Si es un ejecutable (PyInstaller)
         base_path = sys._MEIPASS
     else:
-        base_path = os.path.dirname(os.path.abspath(__file__))
+        # Si estamos en desarrollo:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        base_path = os.path.dirname(current_dir)
     
-    # PyQt requiere forward slashes incluso en Windows para hojas de estilo
+    # Construimos la ruta: TechStore + assets + icons + archivo
     return os.path.join(base_path, "assets", "icons", filename).replace("\\", "/")
 
 # ==========================================
@@ -183,6 +186,154 @@ STYLES = {
         QWidget {{
             background-color: {Palette.Bg_Main};
             
+        }}
+    """,
+
+    # --- BOTONES (Adaptados a TechStore Palette) ---
+    
+    # 1. Botón Principal (Guardar, Aplicar)
+    # Usa tu color de acento (Success) con fondo sutil
+    "btn_primary": f"""
+        QPushButton {{ 
+            background-color: {Palette.Bg_Active}; 
+            border: 1px solid {Palette.Success};
+            color: {Palette.Success};
+            padding: 6px 12px; border-radius: 6px;
+            font-size: 12px; font-weight: bold; 
+        }}
+        QPushButton:hover {{ 
+            background-color: {Palette.Success}; 
+            color: {Palette.Bg_Main}; /* Texto oscuro al pasar el mouse */
+        }}
+    """,
+
+    # 2. Botón Secundario / Delineado (Configurar, Gestionar)
+    "btn_outlined": f"""
+        QPushButton {{ 
+            background-color: transparent; 
+            color: {Palette.Text_Primary}; 
+            padding: 6px 12px; 
+            border: 1px solid {Palette.Border_Light}; 
+            border-radius: 6px;
+            font-size: 12px; font-weight: bold; 
+        }} 
+        QPushButton:hover {{ 
+            border-color: {Palette.Text_Secondary}; 
+            background-color: {Palette.Bg_Hover};
+        }}
+    """,
+
+    # 3. Botón "Peligroso" (Borrar, Desvincular)
+    "btn_danger_outlined": f"""
+        QPushButton {{
+            background-color: transparent; 
+            color: {Palette.Error};
+            padding: 6px 12px; 
+            border: 1px solid {Palette.Error}; 
+            border-radius: 6px;
+            font-weight: bold;
+        }}
+        QPushButton:hover {{ 
+            background-color: {Palette.Error}; 
+            color: {Palette.Text_Primary}; 
+        }}
+    """,
+
+    # 4. Botón Toggle (Activado/Desactivado) - Ideal para bots o estados
+    "btn_toggle": f"""
+        QPushButton {{
+            background-color: {Palette.Bg_Surface};
+            border: 1px solid {Palette.Border_Light};
+            border-radius: 6px;
+            color: {Palette.Text_Secondary};
+            padding: 6px 12px;
+            font-weight: bold;
+        }}
+        QPushButton:hover {{
+            background-color: {Palette.Bg_Hover};
+            color: {Palette.Text_Primary};
+        }}
+        /* ESTADO ACTIVO (CHECKED) */
+        QPushButton:checked {{
+            background-color: {Palette.Bg_Active}; 
+            border: 1px solid {Palette.Success};
+            color: {Palette.Success};
+        }}
+    """,
+
+    # 5. Botón Fantasma (Iconos pequeños, Editar/Borrar en tablas)
+    "btn_icon_ghost": f"""
+        QPushButton {{ 
+            background: transparent; 
+            border: none; 
+            border-radius: 6px; 
+        }} 
+        QPushButton:hover {{ 
+            background-color: {Palette.Bg_Hover}; 
+        }}
+    """,
+    
+    # 6. Botón de Navegación / Shortcut (Más grande)
+    "btn_shortcut": f"""
+        QPushButton {{ 
+            background-color: {Palette.Bg_Surface}; 
+            color: {Palette.Text_Primary};
+            border-radius: 8px; 
+            border: 1px solid {Palette.Border_Light};
+            padding: 10px;
+        }} 
+        QPushButton:hover {{ 
+            background-color: {Palette.Bg_Hover}; 
+            border-color: {Palette.Success}; 
+        }}
+    """,
+
+    # Estilo para la barra de herramientas superior (Buscador + Filtros)
+    "top_bar": f"""
+        QFrame {{
+            background-color: {Palette.Bg_Main};
+            border-radius: {Dims.radius['input']};
+            border: none;
+            padding: 0px;
+        }}
+    """,
+
+    "input_box": f"""
+        QLineEdit {{
+            background-color: {Palette.Bg_Surface};
+            border: 1px solid {Palette.Border_Light};
+            border-radius: {Dims.radius['btn']};
+            color: {Palette.Text_Primary};
+            padding: 6px 10px;
+            font-size: 13px;
+        }}
+        QLineEdit:focus {{
+            border: 1px solid {Palette.Success}; /* Borde verde al escribir */
+        }}
+    """,
+
+    "combo_box": f"""
+        QComboBox {{
+            background-color: {Palette.Bg_Surface};
+            border: 1px solid {Palette.Border_Light};
+            border-radius: {Dims.radius['btn']};
+            color: {Palette.Text_Primary};
+            padding: 6px 10px;
+            min-width: 150px;
+        }}
+        QComboBox::drop-down {{ border: none; }}
+        QComboBox::down-arrow {{ 
+            image: url({asset_url("chevron-down.svg")});
+            width: 16px; height: 16px;
+        }}
+        QComboBox::down-arrow::on {{
+            image: url({asset_url("chevron-up.svg")}); 
+            width: 16px; height: 16px;
+        }}
+        QComboBox QAbstractItemView {{
+            background-color: {Palette.Bg_Hover};
+            color: {Palette.Text_Primary};
+            selection-background-color: {Palette.Bg_Active};
         }}
     """
 }
