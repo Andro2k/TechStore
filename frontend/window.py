@@ -1,6 +1,9 @@
 # frontend/window.py
 
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QStackedWidget)
+
+from frontend.pages.employees_page import EmployeesPage
+from frontend.pages.products_page import ProductsPage
 from .components import Sidebar
 from .theme import get_main_stylesheet
 from .pages.table_page import TablePage
@@ -30,8 +33,8 @@ class TechStoreWindow(QMainWindow):
         # Definimos la estructura ideal
         full_groups = {
             "Recursos Humanos": ["EMPLEADO", "SUCURSAL"],
-            "Logística":        ["PRODUCTO", "INVENTARIO"],
-            "Facturación":      ["FACTURA", "DETALLE_FACTURA"]
+            "Logística":        ["PRODUCTO", "INVENTARIO"], # PRODUCTO debe estar aquí
+            "Facturación":      ["FACTURA", "DETALLE_FACTURA", "CLIENTE"]
         }
 
         # --- 2. FILTRADO POR PERMISOS ---
@@ -55,18 +58,28 @@ class TechStoreWindow(QMainWindow):
         self.sidebar.table_selected.connect(self.switch_page) 
         main_layout.addWidget(self.sidebar)
 
-        # 4. AREA DE CONTENIDO (Igual que antes)
+        # 4. AREA DE CONTENIDO
         self.stack = QStackedWidget()
         self.stack.setObjectName("ContentArea") 
         
-        EDITABLE_TABLES = ["EMPLEADO", "PRODUCTO", "SUCURSAL"] 
+        # Mapa: Si la tabla está aquí, usa su clase especial. Si no, usa TablePage.
+        PAGE_CLASSES = {
+            "PRODUCTO": ProductsPage,
+            "EMPLEADO": EmployeesPage,
+            #"SUCURSAL": SucursalPage #(cuando la crees)
+        }
 
         for table_name in allowed_tables:
-            # Determinamos si esta tabla específica lleva controles
-            has_controls = (table_name in EDITABLE_TABLES)
-
-            # Pasamos el True/False al crear la página
-            page = TablePage(self.manager, table_name, enable_actions=has_controls)
+            
+            if table_name in PAGE_CLASSES:
+                # Instanciamos la clase específica (ej. ProductsPage)
+                # Nota: Ya no pasamos 'table_name' porque la clase ya sabe cuál es
+                page = PAGE_CLASSES[table_name](self.manager)
+            else:
+                # Instanciamos la genérica para tablas simples (ej. CLIENTE, FACTURA)
+                # Aquí determinamos si debe tener botones genéricos o ser solo lectura
+                is_editable = table_name in ["SUCURSAL"] # Agrega aquí otras editables simples
+                page = TablePage(self.manager, table_name, enable_actions=is_editable)
             
             self.stack.addWidget(page)
             self.pages[table_name] = page

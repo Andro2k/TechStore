@@ -267,10 +267,15 @@ class ProductForm(BaseForm):
     def __init__(self, parent=None):
         super().__init__(parent, "Nuevo Producto")
         
+        # Campos de la tabla PRODUCTO
         self.add_input("ID Producto", "Id_producto", "number", required=True)
         self.add_input("Nombre del Producto", "nombre", required=True)
         self.add_input("Marca", "marca", required=True)
         self.add_input("Precio", "precio", "money", required=True)
+        
+        # --- NUEVO CAMPO PARA INVENTARIO ---
+        # Este dato NO va a la tabla producto, pero lo pedimos aquí
+        self.add_input("Stock", "cantidad_inicial", "number", required=True)
         
         self.layout.addStretch()
         self.add_buttons(self.accept)

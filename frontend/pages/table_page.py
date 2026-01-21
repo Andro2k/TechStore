@@ -179,44 +179,68 @@ class TablePage(BasePage):
                 except Exception as e:
                     QMessageBox.critical(self, "Error", f"No se pudo actualizar: {e}")
     
-    def on_add_click(self):
+    def on_edit_click(self, id_col_name, row_id, row_data, columns):
         dialog = None
-        id_col = ""
         
+        # 1. Configuración de formularios
         if self.table_name == "EMPLEADO":
-            # 1. Obtener datos de Sucursales para el Combo
             cols, rows = self.manager.fetch_table_data("SUCURSAL")
-            
-            # 2. Formatear datos: Queremos una lista de tuplas (Nombre, ID)
             sucursal_options = [(row[1], row[0]) for row in rows]
-            
-            # 3. Pasar la lista al formulario
             dialog = EmployeeForm(self, sucursales_list=sucursal_options)
-            id_col = "Id_empleado"
             
         elif self.table_name == "PRODUCTO":
             dialog = ProductForm(self)
-            id_col = "Id_producto"
+            # --- CORRECCIÓN VISUAL: Cargar el stock actual ---
+            current_stock = self.manager.get_product_stock(row_id)
+            # Le pasamos el stock al formulario para que no salga vacío
+            # Asegúrate que en forms.py el campo se llame "cantidad_inicial" o "cantidad"
+            # Aquí asumo que en tu ProductForm el campo se llama "cantidad_inicial"
+            dialog.set_input_value("cantidad_inicial", current_stock)
 
         elif self.table_name == "SUCURSAL":
             dialog = SucursalForm(self)
-            id_col = "id_sucursal"
 
-        # 2. Calcular ID y configurar formulario
-        if dialog and id_col:
-            # A. Pedir al backend el siguiente número
-            next_id = self.manager.get_next_id(self.table_name, id_col)
+        if dialog:
+            dialog.setWindowTitle(f"Editar {self.table_name.capitalize()} #{row_id}")
             
-            # B. Pre-llenar el campo y bloquearlo (True = ReadOnly)
-            dialog.set_input_value(id_col, next_id, readonly=True)
+            # 2. Pre-llenar datos del producto (Nombre, Marca, Precio)
+            current_data = dict(zip(columns, row_data))
+            dialog.populate_data(current_data)
+            
+            # 3. Bloquear ID
+            dialog.set_input_value(id_col_name, row_id, readonly=True)
 
-            # 3. Ejecutar y Guardar
+            # 4. Guardar Cambios
             if dialog.exec() == QDialog.DialogCode.Accepted:
-                data = dialog.get_data()
+                new_data = dialog.get_data()
                 
+                # --- AGREGA ESTAS LÍNEAS DE DEPURACIÓN ---
+                print("DEBUG: Datos recibidos del formulario:", new_data) 
+                # -----------------------------------------
+
                 try:
-                    self.manager.insert_data(self.table_name, data)
+                    if self.table_name == "PRODUCTO":
+                        # Intenta sacar el valor. Si la clave no existe, qty será None.
+                        # Asegúrate que "cantidad_inicial" COINCIDA con forms.py
+                        qty = new_data.pop("cantidad_inicial", None) 
+                        
+                        print(f"DEBUG: Cantidad extraída: {qty}")  # <-- Veremos si captura el número
+
+                        # Actualizar Producto
+                        self.manager.update_data(self.table_name, new_data, id_col_name, row_id)
+                        
+                        # Actualizar Inventario (Solo si qty se encontró)
+                        if qty is not None:
+                            print(f"DEBUG: Actualizando inventario ID {row_id} a {qty}")
+                            self.manager.update_inventory_quantity(row_id, qty)
+                        else:
+                            print("ALERTA: No se encontró 'cantidad_inicial' en el formulario.")
+
+                    else:
+                        self.manager.update_data(self.table_name, new_data, id_col_name, row_id)
+                    
                     self.refresh()
-                    QMessageBox.information(self, "Éxito", f"Registro #{next_id} agregado correctamente.")
+                    QMessageBox.information(self, "Éxito", "Registro actualizado correctamente.")
+
                 except Exception as e:
-                    QMessageBox.critical(self, "Error", f"No se pudo guardar:\n{str(e)}")
+                    QMessageBox.critical(self, "Error", f"No se pudo actualizar: {e}")
