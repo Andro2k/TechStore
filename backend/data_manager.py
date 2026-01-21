@@ -5,26 +5,27 @@ import pyodbc
 
 class DataManager:
     def __init__(self):
-        # Configuración de Nodos
+        # --- 1. CONFIGURACIÓN DE NODOS ---
+        # Aquí ponemos los nombres REALES de tus computadoras
         self.NODES = {
             "GUAYAQUIL": {
-                "hostnames": ["DESKTOP-GUAYAQUIL", "MiniPC"], 
+                "hostnames": ["MiniPC"],  # <--- Nombre exacto de la PC Matriz
                 "db_name": "TechStore_Guayaquil",
                 "role": "Publicador (Matriz)",
                 "tables": ["SUCURSAL", "PRODUCTO", "INVENTARIO", "CLIENTE", "EMPLEADO", "FACTURA", "DETALLE_FACTURA"]
             },
             "QUITO": {
-                "hostnames": ["DESKTOP-QUITO", "LAPTOP"],
+                "hostnames": ["LAPTOP"],  # <--- Nombre exacto de la Laptop Sucursal
                 "db_name": "TechStore_Quito",
                 "role": "Suscriptor (Sucursal)",
                 "tables": ["CLIENTE", "INVENTARIO", "FACTURA", "DETALLE_FACTURA", "SUCURSAL"]
             }
         }
         
-        # Configuración SQL
+        # --- 2. CREDENCIALES SQL SERVER ---
         self.SERVER_ADDR = "localhost"
-        self.DB_USER = ""
-        self.DB_PASS = ""
+        self.DB_USER = "sa"          # <--- Usuario
+        self.DB_PASS = "P@ssw0rd"    # <--- Contraseña
         
         # Detectar nodo al iniciar
         self.current_node = self._detect_node()
@@ -32,10 +33,17 @@ class DataManager:
     def _detect_node(self):
         """Método interno para saber quién soy"""
         pc_name = socket.gethostname()
+        print(f"DEBUG: Nombre de tu PC detectado: '{pc_name}'") # Esto saldrá en la consola negra
+        
         for node_key, config in self.NODES.items():
-            if pc_name in config["hostnames"]:
+            # Buscamos si el nombre actual está en la lista de hostnames
+            # Usamos .upper() para evitar problemas de mayúsculas/minúsculas
+            if pc_name.upper() in [h.upper() for h in config["hostnames"]]:
+                print(f"DEBUG: Configuración cargada para {node_key}")
                 return {"key": node_key, **config}
-        # Fallback
+        
+        # Si no encuentra el nombre, avisa y usa Guayaquil por defecto
+        print(f"ALERTA: PC '{pc_name}' no reconocida en la lista. Usando GUAYAQUIL por defecto.")
         return {"key": "GUAYAQUIL", **self.NODES["GUAYAQUIL"]}
 
     def get_connection(self):
