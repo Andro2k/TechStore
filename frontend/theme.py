@@ -60,11 +60,6 @@ class Dims:
         "body": "13px",
         "small": "11px"
     }
-    # Nuevas dimensiones para el Sidebar
-    sidebar = {
-        "expanded": 260,
-        "collapsed": 70  # Ancho suficiente para ver solo el icono
-    }
 # ==========================================
 # 3. HOJA DE ESTILOS MAESTRA (QSS)
 # ==========================================
@@ -80,15 +75,12 @@ def get_main_stylesheet() -> str:
         font-family: "{d.font['family']}";
         font-size: {d.font['body']};
     }}
-
-    /* --- SIDEBAR --- */
-    /* El sidebar usará el color base Bg_Main (#121212) */
     
     /* --- CONTENIDO DERECHO --- */
-    /* El área de contenido tendrá el borde redondeado y color Surface */
     QWidget#ContentArea {{
         background-color: {p.Bg_Surface};
-        border-top-left-radius: 20px; /* Curva característica de la imagen */
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
     }}
 
     /* --- LABELS --- */
@@ -161,14 +153,14 @@ STYLES = {
             border: none;
             border-radius: 6px;
             text-align: left;
-            padding: 0px; 
+            padding: 4px; 
             margin: 2px 0px;
         }}
         QPushButton:hover {{
             background-color: {Palette.Bg_Hover};
         }}
         QPushButton:checked {{
-            background-color: {Palette.Bg_Active}; /* Gris más claro como en la imagen */
+            background-color: {Palette.Bg_Active};
             color: {Palette.Text_Primary};
         }}
     """,
@@ -189,8 +181,8 @@ STYLES = {
     # Contenedor principal
     "sidebar_container": f"""
         QWidget {{
-            background-color: {Palette.Bg_Main}; /* #121212 */
-            border-right: 1px solid {Palette.Border_Light};
+            background-color: {Palette.Bg_Main};
+            
         }}
     """
 }

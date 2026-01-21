@@ -1,0 +1,74 @@
+# backend/data_manager.py
+
+import socket
+import pyodbc
+
+class DataManager:
+    def __init__(self):
+        # Configuración de Nodos
+        self.NODES = {
+            "GUAYAQUIL": {
+                "hostnames": ["DESKTOP-GUAYAQUIL", "PC-MAIN"], 
+                "db_name": "TechStore_Guayaquil",
+                "role": "Publicador (Matriz)",
+                "tables": ["SUCURSAL", "PRODUCTO", "INVENTARIO", "CLIENTE", "EMPLEADO", "FACTURA", "DETALLE_FACTURA"]
+            },
+            "QUITO": {
+                "hostnames": ["DESKTOP-QUITO", "LAPTOP-SUCURSAL"],
+                "db_name": "TechStore_Quito",
+                "role": "Suscriptor (Sucursal)",
+                "tables": ["CLIENTE", "INVENTARIO", "FACTURA", "DETALLE_FACTURA", "SUCURSAL"]
+            }
+        }
+        
+        # Configuración SQL
+        self.SERVER_ADDR = "localhost"
+        self.DB_USER = ""
+        self.DB_PASS = ""
+        
+        # Detectar nodo al iniciar
+        self.current_node = self._detect_node()
+
+    def _detect_node(self):
+        """Método interno para saber quién soy"""
+        pc_name = socket.gethostname()
+        for node_key, config in self.NODES.items():
+            if pc_name in config["hostnames"]:
+                return {"key": node_key, **config}
+        # Fallback
+        return {"key": "GUAYAQUIL", **self.NODES["GUAYAQUIL"]}
+
+    def get_connection(self):
+        """Genera la conexión ODBC"""
+        conn_str = (
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER={self.SERVER_ADDR};"
+            f"DATABASE={self.current_node['db_name']};"
+        )
+        if self.DB_USER and self.DB_PASS:
+            conn_str += f"UID={self.DB_USER};PWD={self.DB_PASS};"
+        else:
+            conn_str += "Trusted_Connection=yes;"
+
+        return pyodbc.connect(conn_str)
+
+    def fetch_table_data(self, table_name):
+        """
+        Trae los datos de una tabla.
+        Retorna: (columnas, filas) o lanza una excepción si falla.
+        """
+        conn = self.get_connection() # Puede lanzar error, lo capturamos en el frontend
+        cursor = conn.cursor()
+        
+        # OJO: Validar que table_name esté en la lista permitida para seguridad
+        if table_name not in self.current_node["tables"]:
+            raise ValueError(f"Acceso denegado a la tabla {table_name}")
+
+        query = f"SELECT * FROM {table_name}"
+        cursor.execute(query)
+        
+        columns = [column[0] for column in cursor.description]
+        rows = cursor.fetchall()
+        
+        conn.close()
+        return columns, rows

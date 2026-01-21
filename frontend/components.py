@@ -51,11 +51,8 @@ class Sidebar(QFrame):
         self._setup_menu()
         self._setup_footer()
 
-        # --- ANIMACIÓN MEJORADA ---
-        # Usamos QVariantAnimation para controlar setFixedWidth directamente
         self.anim = QVariantAnimation()
-        self.anim.setDuration(400) # Un poco más lento para apreciar la suavidad
-        # OutCubic: Empieza rápido y frena muy suavemente (Efecto Premium)
+        self.anim.setDuration(400)
         self.anim.setEasingCurve(QEasingCurve.Type.OutCubic) 
         self.anim.valueChanged.connect(self.setFixedWidth)
         self.anim.finished.connect(self._on_animation_finished)
@@ -120,7 +117,7 @@ class Sidebar(QFrame):
     def _setup_footer(self):
         self.footer = QFrame()
         self.footer.setFixedHeight(60)
-        self.footer.setStyleSheet(f"border: none; border-top: 1px solid {Palette.Border_Light}; background: transparent;")
+        self.footer.setStyleSheet(f"background: transparent;")
         
         f_layout = QHBoxLayout(self.footer)
         f_layout.setContentsMargins(15, 10, 15, 10)
@@ -140,7 +137,7 @@ class Sidebar(QFrame):
         lbl_node_name.setStyleSheet(f"border: none; font-size: 12px; font-weight: bold; color: {Palette.Text_Primary};")
         
         lbl_role = QLabel(self.node_info['role'])
-        lbl_role.setStyleSheet(f"font-size: 10px; color: {Palette.Text_Secondary};")
+        lbl_role.setStyleSheet(f"border: none; font-size: 10px; color: {Palette.Text_Secondary};")
         
         v_layout.addWidget(lbl_node_name)
         v_layout.addWidget(lbl_role)
@@ -173,16 +170,13 @@ class Sidebar(QFrame):
         current_width = self.width()
         
         if self.is_collapsed:
-            # --- EXPANDIR ---
             self.anim.setStartValue(current_width)
             self.anim.setEndValue(self.full_width)
-            self.anim.setDuration(300) # Un poco más rápido para que se sienta ágil
+            self.anim.setDuration(300)
             
             self.btn_toggle.setIcon(get_icon("chevron-left.svg"))
             
             # MOSTRAR TEXTO INMEDIATAMENTE
-            # Al poner el texto ahora, aparecerá cortado (Inv...) y se "revelará"
-            # conforme la barra crece. Esto elimina la sensación de lag.
             self.lbl_title.show() 
             self.info_container.show()
             for child in self.findChildren(QLabel, "SectionLabel"):
@@ -191,7 +185,7 @@ class Sidebar(QFrame):
             for btn in self.buttons:
                 btn.setStyleSheet(STYLES["sidebar_btn"]) 
                 btn.setIconSize(QSize(20, 20))           
-                btn.setText(btn.text_original) # <--- ¡Aquí está la clave!
+                btn.setText(btn.text_original)
             
         else:
             # --- COLAPSAR ---
@@ -201,7 +195,6 @@ class Sidebar(QFrame):
             
             self.btn_toggle.setIcon(get_icon("menu.svg"))
             
-            # Ocultamos todo para que no se vea "aplastado" mientras cierra
             self.lbl_title.hide()
             self.info_container.hide()
             for child in self.findChildren(QLabel, "SectionLabel"):
@@ -209,7 +202,7 @@ class Sidebar(QFrame):
                 
             for btn in self.buttons:
                 btn.setText("") 
-                btn.setStyleSheet(STYLES["sidebar_btn"] + "QPushButton { padding: 6px; text-align: center; }")
+                btn.setStyleSheet(STYLES["sidebar_btn"] + "QPushButton { padding: 4px; text-align: center; }")
                 btn.setIconSize(QSize(24, 24))
 
         self.anim.start()
