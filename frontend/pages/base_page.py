@@ -43,46 +43,57 @@ class BasePage(QWidget):
         self.layout.addWidget(self.lbl_status)
 
     def _setup_top_bar(self):
-        """Crea la barra superior con Título, Filtro y Buscador"""
+        # ... (Tu código anterior del frame y layout) ...
         top_frame = QFrame()
         top_frame.setFixedHeight(50)
         top_frame.setStyleSheet(STYLES["top_bar"])
         top_layout = QHBoxLayout(top_frame)
         top_layout.setContentsMargins(10,5,10,5)
-        
-        # A. Título a la izquierda
+
+        # A. Título
         self.lbl_title = QLabel("Título")
         self.lbl_title.setObjectName("Title")
         
-        # B. Controles a la derecha
-        # Selector de Columna
+        # B. Controles
         self.combo_columns = QComboBox()
         self.combo_columns.setStyleSheet(STYLES["combo_box"])
         self.combo_columns.setPlaceholderText("Columna...")
         
-        # Input de Búsqueda
         self.txt_search = QLineEdit()
         self.txt_search.setPlaceholderText("Buscar...")
         self.txt_search.setStyleSheet(STYLES["input_box"])
         self.txt_search.setFixedWidth(250)
-        self.txt_search.textChanged.connect(self.filter_data) # <--- CONEXIÓN MÁGICA
-        
-        # Botón de Recargar (Opcional)
+        self.txt_search.textChanged.connect(self.filter_data)
+
+        # --- NUEVO BOTÓN AGREGAR ---
+        self.btn_add = QPushButton(" Nuevo") # Espacio para separar del icono si usas texto
+        # Si tienes un icono 'plus.svg', usa: self.btn_add.setIcon(get_icon("plus.svg"))
+        self.btn_add.setStyleSheet(STYLES["btn_primary"]) 
+        self.btn_add.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_add.clicked.connect(self.on_add_click) # Conectamos a método vacío por defecto
+        self.btn_add.hide() # Lo ocultamos por defecto, lo mostramos solo en tablas permitidas
+
+        # Botón Refresh
         btn_refresh = QPushButton()
-        btn_refresh.setIcon(get_icon("refresh.svg")) # Asegúrate de tener este icono o usa otro
+        btn_refresh.setIcon(get_icon("refresh.svg"))
         btn_refresh.setFixedSize(32, 32)
         btn_refresh.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_refresh.setStyleSheet(STYLES["btn_outlined"]) # Reusamos estilo
+        btn_refresh.setStyleSheet(STYLES["btn_outlined"])
         btn_refresh.clicked.connect(lambda: self.load_data(self.current_table))
 
         top_layout.addWidget(self.lbl_title)
         top_layout.addStretch()
-        top_layout.addWidget(QLabel("Filtrar por:"))
+        top_layout.addWidget(self.btn_add) # <--- AÑADIR AQUI
+        top_layout.addWidget(QLabel("Filtrar:"))
         top_layout.addWidget(self.combo_columns)
         top_layout.addWidget(self.txt_search)
         top_layout.addWidget(btn_refresh)
 
         self.layout.addWidget(top_frame)
+
+    # Método placeholder para ser sobrescrito
+    def on_add_click(self):
+        pass
 
     def set_title(self, title):
         self.lbl_title.setText(title)

@@ -8,13 +8,13 @@ class DataManager:
         # Configuración de Nodos
         self.NODES = {
             "GUAYAQUIL": {
-                "hostnames": ["DESKTOP-GUAYAQUIL", "PC-MAIN"], 
+                "hostnames": ["DESKTOP-GUAYAQUIL", "MiniPC"], 
                 "db_name": "TechStore_Guayaquil",
                 "role": "Publicador (Matriz)",
                 "tables": ["SUCURSAL", "PRODUCTO", "INVENTARIO", "CLIENTE", "EMPLEADO", "FACTURA", "DETALLE_FACTURA"]
             },
             "QUITO": {
-                "hostnames": ["DESKTOP-QUITO", "LAPTOP-SUCURSAL"],
+                "hostnames": ["DESKTOP-QUITO", "LAPTOP"],
                 "db_name": "TechStore_Quito",
                 "role": "Suscriptor (Sucursal)",
                 "tables": ["CLIENTE", "INVENTARIO", "FACTURA", "DETALLE_FACTURA", "SUCURSAL"]
@@ -72,3 +72,29 @@ class DataManager:
         
         conn.close()
         return columns, rows
+    
+    def insert_data(self, table_name, data_dict):
+        """
+        Inserta datos en la tabla.
+        data_dict: Diccionario {'columna': 'valor'}
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        columns = ", ".join(data_dict.keys())
+        placeholders = ", ".join(["?"] * len(data_dict))
+        values = list(data_dict.values())
+        
+        query = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
+        
+        try:
+            cursor.execute(query, values)
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error insertando: {e}")
+            conn.close()
+            raise e
+    
+    
