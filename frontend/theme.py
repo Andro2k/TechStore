@@ -1,219 +1,196 @@
 # frontend/theme.py
+
 import sys
 import os
 
 # ==========================================
-# 0. SISTEMA DE RUTAS
+# 1. SISTEMA DE RUTAS
 # ==========================================
 def asset_url(filename: str) -> str:
+    """Devuelve la ruta absoluta de un recurso para usar en QSS (CSS)."""
     if getattr(sys, 'frozen', False):
         base_path = sys._MEIPASS
     else:
-        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    
+    # PyQt requiere forward slashes incluso en Windows para hojas de estilo
     return os.path.join(base_path, "assets", "icons", filename).replace("\\", "/")
 
 # ==========================================
-# 1. PALETA DE COLORES (Estilo "Spline" Dark)
+# 2. PALETA DE COLORES (MATTE DARK)
 # ==========================================
-class DarkPalette:
-    # Fondos
-    Bg_Sidebar     = "#0e0e0e"  # Negro casi puro
-    Bg_Main        = "#1a1a1a"  # Fondo general
-    Bg_Active_Btn  = "#262626"  # Botones activos / Inputs
-    Bg_Card        = "#141414"  # Fondo para tarjetas (ligeramente distinto al main)
+class Palette:
+    """
+    Paleta basada en el diseño 'Untitled UI' (Matte Black).
+    """
+    # --- Fondos ---
+    Bg_Main        = "#121212" # Fondo del sidebar (Muy oscuro)
+    Bg_Surface     = "#1A1A1A" # Fondo del contenido principal (Ligeramente más claro)
+    Bg_Hover       = "#2d2d2d" # Estado Hover
+    Bg_Active      = "#262626" # Estado Activo/Seleccionado
     
-    # Textos
-    Text_Primary   = "#ffffff"
-    Text_Secondary = "#888888"
-    Text_Category  = "#555555"
+    # --- Bordes ---
+    Border_Light   = "#333333" # Bordes sutiles
+    Border_Focus   = "#555555" # Borde al hacer click
     
-    # Acentos y Bordes
-    Primary        = "#ffffff"
-    Border         = "#333333"
+    # --- Textos ---
+    Text_Primary   = "#FFFFFF" # Títulos
+    Text_Secondary = "#9ca3af" # Subtítulos e iconos (Gray 400)
+    Text_Tertiary  = "#6b7280" # Texto deshabilitado o muy secundario
+    
+    # --- Acentos ---
+    # En la imagen el acento es sutil (blanco o gris claro), no un color fuerte.
+    Accent_Color   = "#FFFFFF" 
+    
+    # --- Estados ---
+    Error          = "#cf6679"
+    Success        = "#03dac6"
 
-c = DarkPalette
+class Dims:
+    """Dimensiones estándar"""
+    radius = {
+        "card":   "16px",  # Bordes curvos grandes (como en la imagen del contenido)
+        "btn":    "6px",   # Botones sidebar
+        "input":  "8px",
+        "scroll": "4px"
+    }
+    font = {
+        "family": "Segoe UI",
+        "h1": "18px",
+        "body": "13px",
+        "small": "11px"
+    }
+    # Nuevas dimensiones para el Sidebar
+    sidebar = {
+        "expanded": 260,
+        "collapsed": 70  # Ancho suficiente para ver solo el icono
+    }
+# ==========================================
+# 3. HOJA DE ESTILOS MAESTRA (QSS)
+# ==========================================
+def get_main_stylesheet() -> str:
+    p = Palette
+    d = Dims
+    
+    return f"""
+    /* --- RESET GENERAL --- */
+    QMainWindow, QWidget {{ 
+        background-color: {p.Bg_Main}; 
+        color: {p.Text_Primary};
+        font-family: "{d.font['family']}";
+        font-size: {d.font['body']};
+    }}
+
+    /* --- SIDEBAR --- */
+    /* El sidebar usará el color base Bg_Main (#121212) */
+    
+    /* --- CONTENIDO DERECHO --- */
+    /* El área de contenido tendrá el borde redondeado y color Surface */
+    QWidget#ContentArea {{
+        background-color: {p.Bg_Surface};
+        border-top-left-radius: 20px; /* Curva característica de la imagen */
+    }}
+
+    /* --- LABELS --- */
+    QLabel {{ background: transparent; border: none; }}
+    QLabel#Title {{ font-size: {d.font['h1']}; font-weight: bold; margin-bottom: 10px; }}
+    QLabel#Subtitle {{ color: {p.Text_Secondary}; }}
+    QLabel#Badge {{ color: {p.Text_Secondary}; font-size: {d.font['small']}; }}
+
+    /* --- COMBOBOX (Selector de tablas) --- */
+    QComboBox {{
+        background-color: {p.Bg_Hover};
+        border: 1px solid {p.Border_Light};
+        border-radius: {d.radius['input']};
+        padding: 5px 10px;
+        color: {p.Text_Primary};
+        min-width: 200px;
+    }}
+    QComboBox:hover {{ border: 1px solid {p.Border_Focus}; }}
+    QComboBox::drop-down {{ border: none; width: 20px; }}
+    QComboBox QAbstractItemView {{
+        background-color: {p.Bg_Hover};
+        color: {p.Text_Primary};
+        selection-background-color: {p.Bg_Active};
+        border: 1px solid {p.Border_Light};
+    }}
+
+    /* --- TABLAS (QTableWidget) --- */
+    QTableWidget {{
+        background-color: {p.Bg_Surface};
+        gridline-color: {p.Border_Light};
+        border: none;
+        outline: none;
+    }}
+    QTableWidget::item {{
+        padding: 8px;
+        border-bottom: 1px solid {p.Border_Light};
+    }}
+    QTableWidget::item:selected {{
+        background-color: {p.Bg_Hover};
+        color: {p.Text_Primary};
+    }}
+    QHeaderView::section {{
+        background-color: {p.Bg_Surface};
+        color: {p.Text_Secondary};
+        padding: 8px;
+        border: none;
+        border-bottom: 2px solid {p.Border_Light};
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 11px;
+    }}
+    
+    /* --- SCROLLBARS (Minimalistas) --- */
+    QScrollBar:vertical {{ background: {p.Bg_Surface}; width: 8px; margin: 0; }}
+    QScrollBar::handle:vertical {{ background: {p.Border_Light}; border-radius: 4px; min-height: 20px; }}
+    QScrollBar::handle:vertical:hover {{ background: {p.Border_Focus}; }}
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+    """
 
 # ==========================================
-# 2. ESTILOS (QSS Dictionary)
+# 4. ESTILOS ESPECÍFICOS PARA WIDGETS
 # ==========================================
+# theme.py (Solo actualiza el diccionario STYLES)
+
 STYLES = {
-    # --- CONTENEDOR PRINCIPAL DEL SIDEBAR ---
-    "sidebar_container": f"""
-        QWidget#Sidebar {{
-            background-color: {c.Bg_Sidebar};
-            border-right: 1px solid {c.Border};
-        }}
-        QLabel#SidebarTitle {{
-            background-color: transparent;
-            color: {c.Text_Primary};
-            font-size: 15px;
-            font-weight: bold;
-            padding-left: 10px;
-        }}
-    """,
-
-    # --- CATEGORÍAS ---
-    "sidebar_category": f"""
-        QLabel {{
-            background-color: transparent;
-            color: {c.Text_Category};
-            font-size: 11px;
-            font-weight: bold;
-            text-transform: uppercase;
-            padding-left: 15px;
-            padding-top: 15px;
-            padding-bottom: 5px;
-        }}
-    """,
-
-    # --- BOTONES DEL MENÚ ---
+    # Botón del sidebar: Texto a la izquierda, sin borde
     "sidebar_btn": f"""
         QPushButton {{
             background-color: transparent;
-            color: {c.Text_Secondary};
-            text-align: left;
-            padding: 10px 15px;
             border: none;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            margin: 2px 10px;
+            border-radius: 6px;
+            text-align: left;
+            padding: 0px; 
+            margin: 2px 0px;
         }}
         QPushButton:hover {{
-            background-color: {c.Bg_Active_Btn};
-            color: {c.Text_Primary};
+            background-color: {Palette.Bg_Hover};
         }}
         QPushButton:checked {{
-            background-color: {c.Bg_Active_Btn};
-            color: {c.Text_Primary};
-            font-weight: bold;
-        }}
-    """,
-
-    # --- NUEVO: TARJETAS (Cards) --- 
-    # (Esto faltaba y causaba el error)
-    "card": f"""
-        QFrame {{
-            background-color: {c.Bg_Card};
-            
-            border-radius: 12px;
-        }}
-    """,
-
-    "h2": f"""
-        QLabel {{
-            background-color: transparent;
-            font-size: 16px; font-weight: bold; color: #0078d7;
-        }}
-    """,
-
-    # --- BOTONES DE ACCIÓN ---
-    "btn_primary": f"""
-        QPushButton {{
-            background-color: {c.Primary};
-            color: {c.Bg_Sidebar};
-            border: none;
-            border-radius: 12;
-            padding: 10px 20px;
-            font-weight: bold;
-            font-size: 13px;
-        }}
-        QPushButton:hover {{
-            background-color: {c.Bg_Sidebar};
-        }}
-        QPushButton:pressed {{
-            background-color: {c.Primary};
-            margin-top: 2px; /* Efecto de presión */
-        }}
-    """,
-
-    "btn_outline": f"""
-        QPushButton {{
-            background-color: transparent;
-            border: 1px solid {c.Border};
-            color: {c.Primary};
-            border-radius: 12;
-            padding: 8px 16px;
-            font-weight: 600;
-            font-size: 13px;
-        }}
-        QPushButton:hover {{
-            border: 1px solid {c.Primary};
-            color: {c.Primary};
-            background-color: {c.Bg_Main};
-        }}
-        QPushButton:pressed {{
-            background-color: {c.Bg_Sidebar};
-        }}
-    """,
-
-    # --- NUEVO: INPUTS (Cajas de texto) ---
-    "input": f"""
-        QLineEdit {{
-            background-color: {c.Bg_Active_Btn};
-            border: 1px solid {c.Border};
-            border-radius: 8px;
-            padding: 10px;
-            color: {c.Text_Primary};
-            font-size: 13px;
-        }}
-        QLineEdit:focus {{
-            border: 1px solid {c.Text_Primary}; /* Borde blanco al enfocar */
-            background-color: {c.Bg_Active_Btn};
-        }}
-    """,
-
-    # --- COMBOBOX ---
-    "combobox": f"""
-        QComboBox {{
-            background-color: {c.Bg_Active_Btn};
-            border: 1px solid {c.Border};
-            color: {c.Text_Primary};
-            border-radius: 8px;
-            padding: 8px;
-        }}
-        QComboBox::drop-down {{ border: none; }}
-        QComboBox QAbstractItemView {{
-            background-color: {c.Bg_Sidebar};
-            color: {c.Text_Primary};
-            selection-background-color: {c.Bg_Active_Btn};
-            border: 1px solid {c.Border};
-        }}
-    """,
-
-    # --- NUEVO: TABLAS ---
-    "table": f"""
-        QTableWidget {{
-            background-color: {c.Bg_Card};
-            gridline-color: {c.Border};
-            border: 1px solid {c.Border};
-            color: {c.Text_Primary};
-            border-radius: 8px;
-        }}
-        QHeaderView::section {{
-            background-color: {c.Bg_Sidebar};
-            color: {c.Text_Secondary};
-            padding: 8px;
-            border: none;
-            font-weight: bold;
-            font-size: 12px;
-            text-transform: uppercase;
-        }}
-        QTableWidget::item {{
-            padding: 5px;
-        }}
-        QTableCornerButton::section {{
-            background-color: {c.Bg_Sidebar};
-            border: none;
+            background-color: {Palette.Bg_Active}; /* Gris más claro como en la imagen */
+            color: {Palette.Text_Primary};
         }}
     """,
     
-    # --- HOJA GLOBAL SIMPLE ---
-    "main_window": f"""
-        QMainWindow, QWidget {{
-            background-color: {c.Bg_Main};
-            font-family: "Segoe UI", sans-serif;
-            color: {c.Text_Primary};
+    # Etiquetas de sección (ej: "Main", "Projects")
+    "sidebar_section_label": f"""
+        QLabel {{
+            color: {Palette.Text_Tertiary};
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            padding-left: 12px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }}
+    """,
+
+    # Contenedor principal
+    "sidebar_container": f"""
+        QWidget {{
+            background-color: {Palette.Bg_Main}; /* #121212 */
+            border-right: 1px solid {Palette.Border_Light};
         }}
     """
 }
