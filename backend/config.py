@@ -15,13 +15,13 @@ NODES = {
         "hostnames": ["MiniPC"],
         "db_name": "TechStore_Guayaquil",
         "role": "Publicador (Matriz)",
-        "id_sucursal": 1
+        "id_sucursal": 2
     },
     "QUITO": {
         "hostnames": ["LAPTOP"], 
         "db_name": "TechStore_Quito",
         "role": "Suscriptor (Sucursal)",
-        "id_sucursal": 2
+        "id_sucursal": 3
     }
 }
 
