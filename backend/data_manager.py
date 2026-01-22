@@ -76,10 +76,12 @@ class DataManager:
         """Método puente usado por app.py"""
         return self.web_service.get_catalog()
 
-    def process_web_purchase(self, product_id, client_id):
-        """Procesa la compra vinculándola al cliente."""
-        return self.web_service.process_purchase(product_id, client_id)
+    def process_web_cart(self, client_id, cart_items):
+        return self.web_service.process_cart_purchase(client_id, cart_items)
     
     def register_web_client(self, client_data):
         """Registra un cliente desde la web y retorna su ID."""
         return self.web_service.register_client(client_data)
+    
+    def login_web_client(self, email):
+        return self.web_service.login_by_email(email)

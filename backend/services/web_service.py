@@ -28,67 +28,96 @@ class WebService:
         finally:
             conn.close()
             
-    def process_purchase(self, product_id, client_id):
+    def process_cart_purchase(self, client_id, cart_items):
+        """
+        cart_items: Lista de diccionarios [{'id': 1, 'qty': 2}, ...]
+        """
         conn = get_db_connection()
         cursor = conn.cursor()
         sucursal_id = CURRENT_NODE["id_sucursal"]
         
         try:
-            # 1. Verificar Stock y obtener Precio
-            query_check = """
-                SELECT I.cantidad, P.precio 
-                FROM INVENTARIO I
-                JOIN PRODUCTO P ON I.Id_producto = P.Id_producto
-                WHERE I.Id_producto = ? AND I.Id_sucursal = ?
-            """
-            cursor.execute(query_check, (product_id, sucursal_id))
-            row = cursor.fetchone()
-            
-            if not row or row[0] < 1:
-                return False, "Producto agotado o no disponible en esta sucursal."
-            
-            precio_unitario = float(row[1])
-            
-            # --- INICIO TRANSACCIÓN ---
+            total_factura = 0.0
+            detalles_para_insertar = []
 
-            # 2. Generar ID FACTURA (Específico para esta sucursal)
-            # Como la PK es compuesta (id_factura + id_sucursal), buscamos el MAX solo de esta sucursal
+            # 1. VALIDACIÓN PREVIA Y CÁLCULO
+            # Recorremos el carrito para verificar stock y precios antes de tocar nada
+            for item in cart_items:
+                prod_id = item['id']
+                qty_solicitada = item['qty']
+
+                query_check = """
+                    SELECT I.cantidad, P.precio, P.nombre
+                    FROM INVENTARIO I
+                    JOIN PRODUCTO P ON I.Id_producto = P.Id_producto
+                    WHERE I.Id_producto = ? AND I.Id_sucursal = ?
+                """
+                cursor.execute(query_check, (prod_id, sucursal_id))
+                row = cursor.fetchone()
+
+                if not row:
+                    return False, f"Producto ID {prod_id} no disponible."
+                
+                stock_actual = row[0]
+                precio_unitario = float(row[1])
+                nombre_prod = row[2]
+
+                if stock_actual < qty_solicitada:
+                    return False, f"Stock insuficiente para '{nombre_prod}'. Disponibles: {stock_actual}"
+                
+                subtotal = precio_unitario * qty_solicitada
+                total_factura += subtotal
+                
+                # Guardamos datos para la inserción posterior
+                detalles_para_insertar.append({
+                    "prod_id": prod_id,
+                    "qty": qty_solicitada,
+                    "precio": precio_unitario,
+                    "subtotal": subtotal
+                })
+
+            # --- INICIO TRANSACCIÓN ---
+            
+            # 2. Generar Cabecera FACTURA
             cursor.execute("SELECT MAX(id_factura) FROM FACTURA WHERE id_sucursal = ?", (sucursal_id,))
             row_max = cursor.fetchone()
             new_factura_id = (row_max[0] + 1) if row_max and row_max[0] else 1
             
-            # 3. Insertar FACTURA
             fecha_actual = datetime.now()
+            
             query_factura = """
                 INSERT INTO FACTURA (id_factura, fecha, total, id_cliente, id_sucursal)
                 VALUES (?, ?, ?, ?, ?)
             """
-            cursor.execute(query_factura, (new_factura_id, fecha_actual, precio_unitario, client_id, sucursal_id))
-            
-            # 4. Insertar DETALLE_FACTURA
-            # Nota: No usamos id_detalle. La PK es (id_factura, id_producto, id_sucursal)
-            query_detalle = """
-                INSERT INTO DETALLE_FACTURA 
-                (id_factura, id_producto, id_sucursal, cantidad, precio_unidad, subtotal)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """
-            # El subtotal es igual al precio_unidad porque cantidad es 1
-            cursor.execute(query_detalle, (new_factura_id, product_id, sucursal_id, 1, precio_unitario, precio_unitario))
+            cursor.execute(query_factura, (new_factura_id, fecha_actual, total_factura, client_id, sucursal_id))
 
-            # 5. Actualizar Stock
-            query_update = """
-                UPDATE INVENTARIO 
-                SET cantidad = cantidad - 1 
-                WHERE Id_producto = ? AND Id_sucursal = ?
-            """
-            cursor.execute(query_update, (product_id, sucursal_id))
-            
+            # 3. Insertar DETALLES y Actualizar STOCK (Bucle de escritura)
+            for det in detalles_para_insertar:
+                # Insertar Detalle
+                query_detalle = """
+                    INSERT INTO DETALLE_FACTURA 
+                    (id_factura, id_producto, id_sucursal, cantidad, precio_unidad, subtotal)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """
+                cursor.execute(query_detalle, (
+                    new_factura_id, det['prod_id'], sucursal_id, 
+                    det['qty'], det['precio'], det['subtotal']
+                ))
+
+                # Restar Inventario
+                query_update = """
+                    UPDATE INVENTARIO 
+                    SET cantidad = cantidad - ? 
+                    WHERE Id_producto = ? AND Id_sucursal = ?
+                """
+                cursor.execute(query_update, (det['qty'], det['prod_id'], sucursal_id))
+
             conn.commit()
-            return True, f"Factura #{new_factura_id} generada correctamente."
-            
+            return True, f"Compra completada. Factura #{new_factura_id}"
+
         except Exception as e:
             conn.rollback()
-            print(f"Error en compra: {e}")
+            print(f"Error en compra carrito: {e}")
             return False, f"Error del sistema: {str(e)}"
         finally:
             conn.close()
@@ -133,6 +162,25 @@ class WebService:
         except Exception as e:
             conn.rollback()
             print(f"Error registrando cliente: {e}")
+            return None
+        finally:
+            conn.close()
+
+    def login_by_email(self, email):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            # Buscamos ID y Nombre usando el correo
+            query = "SELECT id_cliente, nombre FROM CLIENTE WHERE correo = ?"
+            cursor.execute(query, (email,))
+            row = cursor.fetchone()
+            
+            if row:
+                return {"id": row[0], "nombre": row[1]}
+            else:
+                return None
+        except Exception as e:
+            print(f"Error en login: {e}")
             return None
         finally:
             conn.close()

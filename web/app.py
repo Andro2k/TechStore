@@ -1,11 +1,9 @@
-# web_app/app.py
+# web_app/app.py (Actualizado)
 
 import sys
 import os
-# AGREGAMOS 'session' a los imports
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 
-# ... (Tus imports de path y DataManager siguen igual) ...
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
@@ -17,77 +15,153 @@ app.secret_key = "techstore_secret"
 
 manager = DataManager()
 
+# --- RUTAS DE TIENDA ---
+
 @app.route('/')
 def index():
     products = manager.get_web_catalog()
-    # Pasamos si el usuario está logueado para mostrar algo diferente en el HTML
-    user_logged_in = 'client_id' in session
-    return render_template('store.html', products=products, node=manager.current_node['key'], logged_in=user_logged_in)
+    # Inicializar carrito si no existe
+    if 'cart' not in session:
+        session['cart'] = {}
+    return render_template('store.html', products=products, node=manager.current_node['key'])
 
-@app.route('/buy/<int:product_id>', methods=['POST'])
-def buy_product(product_id):
-    # 1. VERIFICAR SI EL USUARIO YA SE REGISTRÓ
+@app.route('/add_to_cart', methods=['POST'])
+def add_to_cart():
+    product_id = request.form.get('product_id')
+    cantidad = int(request.form.get('cantidad', 1))
+    
+    if 'cart' not in session:
+        session['cart'] = {}
+    
+    cart = session['cart']
+    # Si ya existe, sumamos; si no, creamos.
+    if product_id in cart:
+        cart[product_id] += cantidad
+    else:
+        cart[product_id] = cantidad
+    
+    session.modified = True # Importante para guardar cambios en diccionarios de sesión
+    flash(f"Producto agregado al carrito.", "success")
+    return redirect(url_for('index'))
+
+@app.route('/cart')
+def view_cart():
+    if 'cart' not in session or not session['cart']:
+        return render_template('cart.html', cart_items=[], total=0)
+    
+    # Recuperamos detalles completos de productos para mostrar nombres y precios
+    all_products = manager.get_web_catalog()
+    cart_items = []
+    total_general = 0
+    
+    for prod in all_products:
+        p_id = str(prod['id'])
+        if p_id in session['cart']:
+            qty = session['cart'][p_id]
+            subtotal = prod['precio'] * qty
+            total_general += subtotal
+            cart_items.append({
+                "id": p_id,
+                "nombre": prod['nombre'],
+                "marca": prod['marca'],
+                "precio": prod['precio'],
+                "qty": qty,
+                "subtotal": subtotal
+            })
+            
+    return render_template('cart.html', cart_items=cart_items, total=total_general)
+
+@app.route('/clear_cart')
+def clear_cart():
+    session['cart'] = {}
+    session.modified = True
+    return redirect(url_for('index'))
+
+@app.route('/checkout', methods=['POST'])
+def checkout():
+    # 1. Verificar Login
     if 'client_id' not in session:
-        session['pending_product_id'] = product_id
-        flash("Por favor, regístrate antes de completar la compra.", "info")
-        return redirect(url_for('register_view'))
-
-    # 2. OBTENER ID DEL CLIENTE
+        flash("Debes iniciar sesión para finalizar la compra.", "info")
+        return redirect(url_for('register_view')) # O login
+    
+    # 2. Obtener items
+    cart = session.get('cart', {})
+    if not cart:
+        flash("El carrito está vacío.", "warning")
+        return redirect(url_for('index'))
+    
+    # Convertir formato para el backend: [{'id': 1, 'qty': 2}, ...]
+    items_to_buy = [{"id": int(k), "qty": v} for k, v in cart.items()]
     client_id = session['client_id']
-
-    # 3. PROCESAR COMPRA CON EL CLIENTE
-    # --- CAMBIO AQUÍ: Pasamos el client_id ---
-    success, message = manager.process_web_purchase(product_id, client_id)
+    
+    # 3. Procesar
+    success, message = manager.process_web_cart(client_id, items_to_buy)
     
     if success:
-        flash(f"¡Compra exitosa! {message}", "success")
-        session.pop('pending_product_id', None)
+        flash(f"¡Éxito! {message}", "success")
+        session['cart'] = {} # Vaciar carrito
+        session.modified = True
     else:
         flash(f"Error: {message}", "danger")
         
     return redirect(url_for('index'))
 
+# --- RUTAS DE USUARIO ---
+
 @app.route('/register', methods=['GET', 'POST'])
 def register_view():
     if request.method == 'POST':
-        # Recopilar datos del formulario
+        # (TU LÓGICA DE REGISTRO PREVIA SE MANTIENE IGUAL)
         client_data = {
-            "cedula": request.form['cedula'],
             "nombre": request.form['nombre'],
             "apellido": request.form['apellido'],
-            "correo": request.form['email'],     # Ojo con el name en el HTML
+            "correo": request.form['email'],
             "telefono": request.form['telefono'],
             "direccion": request.form['direccion']
         }
-        
-        # Guardar en BD
-        client_id = manager.register_web_client(client_data)
-        
-        if client_id:
-            # Guardar en sesión (LOGIN EXITOSO)
-            session['client_id'] = client_id
+        c_id = manager.register_web_client(client_data)
+        if c_id:
+            session['client_id'] = c_id
             session['client_name'] = client_data['nombre']
-            flash(f"Bienvenido, {client_data['nombre']}. Registro exitoso.", "success")
-            
-            # ¿Tenía una compra pendiente?
-            pending_prod = session.get('pending_product_id')
-            if pending_prod:
-                # Redirigir automáticamente a comprar el producto que quería
-                # Usamos un truco para llamar a la ruta de compra (código 307 mantiene el POST)
-                # O simplemente redirigimos a una ruta intermedia. Por simplicidad:
-                return buy_product(pending_prod)
-            
-            return redirect(url_for('index'))
+            flash(f"Bienvenido {client_data['nombre']}", "success")
+            # Si venía del carrito, lo mandamos al carrito
+            return redirect(url_for('view_cart'))
         else:
-            flash("Error al registrar. Verifica los datos.", "danger")
-
+            flash("Error en registro", "danger")
+            
     return render_template('register.html')
 
 @app.route('/logout')
 def logout():
     session.clear()
-    flash("Has cerrado sesión.", "info")
     return redirect(url_for('index'))
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login_view():
+    if request.method == 'POST':
+        email = request.form['email']
+        
+        # Buscamos al usuario
+        user = manager.login_web_client(email)
+        
+        if user:
+            # ¡Exito! Guardamos en sesión
+            session['client_id'] = user['id']
+            session['client_name'] = user['nombre']
+            flash(f"¡Hola de nuevo, {user['nombre']}!", "success")
+            
+            # Si tenía algo en el carrito, vamos al carrito
+            if 'cart' in session and session['cart']:
+                return redirect(url_for('view_cart'))
+            
+            return redirect(url_for('index'))
+        else:
+            flash("Ese correo no está registrado. Por favor regístrate primero.", "warning")
+            return redirect(url_for('register_view'))
+
+    return render_template('login.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

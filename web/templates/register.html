@@ -5,12 +5,43 @@
     <title>Registro - TechStore</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #121212; color: white; }
-        .card { background-color: #1E1E1E; border: 1px solid #333; }
-        .form-control { background-color: #2C2C2C; border: 1px solid #444; color: white; }
-        .form-control:focus { background-color: #333; color: white; border-color: #03dac6; }
-        .btn-primary { background-color: #03dac6; border: none; color: #000; font-weight: bold; }
-        .btn-primary:hover { background-color: #01877e; color: white; }
+        body { 
+            background-color: #121212; 
+            color: white; 
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .card { 
+            background-color: #1E1E1E; 
+            border: 1px solid #333; 
+        }
+        .form-control { 
+            background-color: #2C2C2C; 
+            border: 1px solid #444; 
+            color: white; 
+        }
+        .form-control:focus { 
+            background-color: #333; 
+            color: white; 
+            border-color: #03dac6; 
+            box-shadow: 0 0 0 0.25rem rgba(3, 218, 198, 0.25);
+        }
+        /* AQUÍ ESTÁ EL CAMBIO PARA LOS LABELS */
+        label {
+            color: #03dac6; /* Color Turquesa Neón */
+            font-weight: 600; /* Un poco más gorditas */
+            margin-bottom: 5px;
+        }
+        .btn-primary { 
+            background-color: #03dac6; 
+            border: none; 
+            color: #000; 
+            font-weight: bold; 
+        }
+        .btn-primary:hover { 
+            background-color: #02b3a2; 
+            color: white; 
+        }
+        a { text-decoration: none; }
     </style>
 </head>
 <body>
@@ -18,13 +49,20 @@
         <div class="row justify-content-center">
             <div class="col-md-6">
                 <div class="card p-4 shadow">
-                    <h2 class="text-center mb-4" style="color: #03dac6;">Registro de Cliente</h2>
+                    <h2 class="text-center mb-4" style="color: white;">Crear Cuenta Nueva</h2>
+                    
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
                     
                     <form action="{{ url_for('register_view') }}" method="POST">
-                        <div class="mb-3">
-                            <label>Cédula / DNI</label>
-                            <input type="text" name="cedula" class="form-control" required>
-                        </div>
                         <div class="row">
                             <div class="col-6 mb-3">
                                 <label>Nombre</label>
@@ -48,17 +86,23 @@
                             <textarea name="direccion" class="form-control" rows="2"></textarea>
                         </div>
                         
-                        <button type="submit" class="btn btn-primary w-100 py-2">
-                            Registrar y Continuar
+                        <button type="submit" class="btn btn-primary w-100 py-2 mt-2">
+                            Registrarse
                         </button>
                     </form>
                     
+                    <div class="text-center mt-4">
+                        <small class="text-secondary">¿Ya tienes cuenta?</small><br>
+                        <a href="{{ url_for('login_view') }}" class="text-info fw-bold">Inicia Sesión aquí</a>
+                    </div>
+                    
                     <div class="text-center mt-3">
-                        <a href="{{ url_for('index') }}" class="text-secondary">Volver a la tienda</a>
+                        <a href="{{ url_for('index') }}" class="text-secondary small">Volver a la tienda</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

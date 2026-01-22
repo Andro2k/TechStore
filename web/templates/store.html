@@ -1,110 +1,153 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>TechStore Web</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <style>
-        body {
-            background-color: #121212; /* Tu Bg_Main */
-            color: #ffffff;
-            font-family: 'Segoe UI', sans-serif;
-        }
-        .navbar {
-            background-color: #1A1A1A; /* Tu Bg_Surface */
-            border-bottom: 1px solid #333;
-        }
-        .card {
-            background-color: #1A1A1A;
-            border: 1px solid #333;
-            color: white;
-            transition: transform 0.2s;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-            border-color: #03dac6; /* Tu color Success */
-        }
-        .btn-buy {
-            background-color: #03dac6;
-            color: #121212;
-            font-weight: bold;
-            border: none;
-        }
-        .btn-buy:hover {
-            background-color: #02b3a2;
-            color: white;
-        }
-        .price-tag {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #03dac6;
-        }
-        .badge-stock {
-            background-color: #333;
-            color: #9ca3af;
-        }
+      body {
+        background-color: #121212;
+        color: #ffffff;
+        font-family: "Segoe UI", sans-serif;
+      }
+      .navbar {
+        background-color: #1a1a1a;
+        border-bottom: 1px solid #333;
+      }
+      .card {
+        background-color: #1e1e1e;
+        border: 1px solid #333;
+        color: white;
+      }
+      .btn-add {
+        background-color: #03dac6;
+        color: #000;
+        border: none;
+        font-weight: bold;
+      }
+      .btn-add:hover {
+        background-color: #02b3a2;
+        color: white;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+      <div class="container">
+        <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"
+          >TechStore
+          <span class="badge bg-primary text-dark ms-2">{{ node }}</span></a
+        >
 
-    <nav class="navbar navbar-dark mb-4">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="#">
-                TechStore <span class="badge bg-primary text-dark ms-2">{{ node }}</span>
-            </a>
+        <div class="d-flex align-items-center">
+          <a
+            href="{{ url_for('view_cart') }}"
+            class="btn btn-outline-info me-3 position-relative"
+          >
+            🛒 Carrito {% if session.get('cart') %}
+            <span
+              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+            >
+              {{ session.get('cart')|length }}
+            </span>
+            {% endif %}
+          </a>
+
+          {% if session.get('client_name') %}
+          <div class="me-3 text-end">
+            <small class="d-block text-secondary" style="font-size: 0.75rem"
+              >Usuario</small
+            >
+            <span class="text-light fw-bold">{{ session['client_name'] }}</span>
+          </div>
+          <a
+            href="{{ url_for('logout') }}"
+            class="btn btn-sm btn-outline-danger"
+            >Salir</a
+          >
+          {% else %}
+          <a
+            href="{{ url_for('login_view') }}"
+            class="btn btn-sm btn-outline-light me-2"
+            >Ingresar</a
+          >
+          <a
+            href="{{ url_for('register_view') }}"
+            class="btn btn-sm btn-primary"
+            >Registrarse</a
+          >
+          {% endif %}
         </div>
+      </div>
     </nav>
 
     <div class="container">
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show">
+        {{ message }}
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+        ></button>
+      </div>
+      {% endfor %} {% endif %} {% endwith %}
 
-        <div class="row">
-            {% for product in products %}
-            <div class="col-md-4 col-sm-6 mb-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body d-flex flex-column">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <h5 class="card-title">{{ product.nombre }}</h5>
-                            <span class="badge badge-stock">{{ product.marca }}</span>
-                        </div>
-                        
-                        <p class="card-text text-secondary mt-2">
-                            ID: {{ product.id }}
-                        </p>
-                        
-                        <div class="mt-auto">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="price-tag">${{ product.precio }}</span>
-                                <small class="text-white-50">Stock: {{ product.stock }}</small>
-                            </div>
-                            
-                            <form action="{{ url_for('buy_product', product_id=product.id) }}" method="POST">
-                                <button type="submit" class="btn btn-buy w-100">
-                                    Comprar Ahora
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+      <div class="row">
+        {% for product in products %}
+        <div class="col-md-4 mb-4">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">{{ product.nombre }}</h5>
+              <p class="text-secondary mb-1">{{ product.marca }}</p>
+              <h4 class="text-info">${{ product.precio }}</h4>
+              <small class="text-white-50 mb-3"
+                >Stock: {{ product.stock }}</small
+              >
+
+              <div class="mt-auto">
+                <form
+                  action="{{ url_for('add_to_cart') }}"
+                  method="POST"
+                  class="d-flex gap-2"
+                >
+                  <input
+                    type="hidden"
+                    name="product_id"
+                    value="{{ product.id }}"
+                  />
+                  <input
+                    type="number"
+                    name="cantidad"
+                    value="1"
+                    min="1"
+                    max="{{ product.stock }}"
+                    class="form-control w-50"
+                    style="
+                      background: #2c2c2c;
+                      color: white;
+                      border-color: #444;
+                    "
+                  />
+                  <button type="submit" class="btn btn-add w-100">
+                    Agregar
+                  </button>
+                </form>
+              </div>
             </div>
-            {% else %}
-            <div class="col-12 text-center mt-5">
-                <h3 class="text-muted">No hay productos con stock disponible en este momento.</h3>
-            </div>
-            {% endfor %}
+          </div>
         </div>
+        {% else %}
+        <div class="col-12 text-center">
+          <h3 class="text-muted">No hay stock disponible.</h3>
+        </div>
+        {% endfor %}
+      </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+  </body>
 </html>
