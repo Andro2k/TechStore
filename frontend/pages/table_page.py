@@ -134,10 +134,14 @@ class TablePage(BasePage):
         if reply == QMessageBox.StandardButton.Yes:
             try:
                 self.manager.delete_data(self.table_name, id_col_name, row_id)
-                self.refresh() # Recargar tabla
-                QMessageBox.information(self, "Eliminado", "Registro eliminado correctamente.")
+                self.refresh() 
+                
+                # --- CAMBIO: Confirmación visual no intrusiva ---
+                self.show_success("Eliminado", f"El registro #{row_id} ha sido eliminado.")
+                
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"No se pudo eliminar: {e}")
+                # --- CAMBIO: Error visual ---
+                self.show_error("No se pudo eliminar", str(e))
 
     # --- LÓGICA DE EDITAR ---
     def on_edit_click(self, id_col_name, row_id, row_data, columns):

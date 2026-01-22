@@ -23,16 +23,15 @@ class ProductsPage(TablePage):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             data = dialog.get_data()
             try:
-                # Separamos la cantidad (inventario) de los datos del producto
                 qty = data.pop("cantidad_inicial", 0) 
-                
-                # Usamos el método transaccional del manager
                 self.manager.create_product_with_inventory(data, qty)
-                
                 self.refresh()
-                QMessageBox.information(self, "Éxito", f"Producto #{next_id} creado con {qty} unidades.")
+                
+                self.show_success("Producto Creado", f"Se registró el producto #{data['Id_producto']} correctamente.")
+                
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"No se pudo guardar: {e}")
+                # --- CAMBIO AQUÍ ---
+                self.show_error("Error de Base de Datos", str(e))
 
     def on_edit_click(self, id_col_name, row_id, row_data, columns):
         """Lógica exclusiva para EDITAR producto + inventario"""
@@ -62,6 +61,8 @@ class ProductsPage(TablePage):
                     self.manager.update_inventory_quantity(row_id, qty)
                 
                 self.refresh()
-                QMessageBox.information(self, "Actualizado", "Producto y stock actualizados.")
+                self.show_success("Actualización Exitosa", "Los datos del producto y stock han sido guardados.")
+                
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Fallo al actualizar: {e}")
+                # --- CAMBIO AQUÍ ---
+                self.show_error("Error al Actualizar", str(e))

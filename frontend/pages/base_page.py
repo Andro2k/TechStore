@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from frontend.theme import Palette, STYLES
+from frontend.toast_alert import ToastNotification
 from frontend.utils import get_icon
 
 class BasePage(QWidget):
@@ -42,6 +43,8 @@ class BasePage(QWidget):
         self.lbl_status = QLabel("Listo")
         self.lbl_status.setObjectName("Badge")
         self.layout.addWidget(self.lbl_status)
+
+        pass
 
     def _setup_top_bar(self):
         # ... (Tu código anterior del frame y layout) ...
@@ -80,7 +83,7 @@ class BasePage(QWidget):
         btn_refresh.setFixedSize(32, 32)
         btn_refresh.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_refresh.setStyleSheet(STYLES["btn_outlined"])
-        btn_refresh.clicked.connect(lambda: self.load_data(self.current_table))
+        btn_refresh.clicked.connect(self.on_refresh_click)
 
         top_layout.addWidget(self.lbl_title)
         top_layout.addStretch()
@@ -92,7 +95,6 @@ class BasePage(QWidget):
 
         self.layout.addWidget(top_frame)
 
-    # Método placeholder para ser sobrescrito
     def on_add_click(self):
         pass
 
@@ -119,16 +121,17 @@ class BasePage(QWidget):
                     item = QTableWidgetItem(val)
                     item.setToolTip(val)
                     self.table.setItem(row_idx, col_idx, item)
-            
-            self.lbl_status.setText(f"{len(rows)} registros cargados.")
 
-            # 2. Configurar el ComboBox con las columnas reales
+            # Configurar combo filtros
             self.combo_columns.clear()
             self.combo_columns.addItem("Todo")
             self.combo_columns.addItems(columns)
+            self.lbl_status.setText(f"{len(rows)} registros cargados.")
+            return True
             
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"No se pudo cargar {table_name}: {e}")
+            self.show_error("Error de Carga", f"No se pudo cargar {table_name}: {e}")
+            return False 
 
     def filter_data(self):
         """Lógica de filtrado en tiempo real (Frontend-side)"""
@@ -194,3 +197,31 @@ class BasePage(QWidget):
                     border: 1px solid {Palette.Border_Light};
                     font-weight: bold;
                 """)
+
+    # ==========================================
+    # NUEVOS MÉTODOS PARA NOTIFICACIONES
+    # ==========================================
+    def show_success(self, title, message):
+        """Lanza un Toast Verde"""
+        toast = ToastNotification(self.window(), title, message, "success")
+        toast.show_toast()
+
+    def show_error(self, title, message):
+        """Lanza un Toast Rojo"""
+        toast = ToastNotification(self.window(), title, message, "error")
+        toast.show_toast()
+
+    def show_warning(self, title, message):
+        """Lanza un Toast Amarillo"""
+        toast = ToastNotification(self.window(), title, message, "warning")
+        toast.show_toast()
+
+    def show_info(self, title, message):
+        """Lanza un Toast Azul"""
+        toast = ToastNotification(self.window(), title, message, "info")
+        toast.show_toast()
+
+    def on_refresh_click(self):
+        """Recarga los datos y avisa si salió bien"""
+        if self.load_data(self.current_table):
+            self.show_info("Actualizado", "Los datos se han recargado correctamente.")
