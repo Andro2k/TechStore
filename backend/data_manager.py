@@ -4,17 +4,15 @@ from backend.config import CURRENT_NODE, SUPPORTED_TABLES
 from backend.generic_dao import GenericDAO
 from backend.services.inventory_service import InventoryService
 from backend.connection import get_db_connection
+from backend.services.web_service import WebService
 
 class DataManager:
     def __init__(self):
         # 1. Instanciamos los servicios especializados
         self.dao = GenericDAO()
         self.inventory_service = InventoryService()
-        
-        # 2. Exponemos la configuración del nodo (Frontend lo necesita para el título y Sidebar)
+        self.web_service = WebService()
         self.current_node = CURRENT_NODE
-        
-        # 3. Detectar tablas dinámicamente (Lógica portada del antiguo backend)
         self.current_node["tables"] = self._get_available_tables_from_db()
 
     def _get_available_tables_from_db(self):
@@ -73,3 +71,15 @@ class DataManager:
 
     def get_product_stock(self, product_id):
         return self.inventory_service.get_product_stock(product_id)
+    
+    def get_web_catalog(self):
+        """Método puente usado por app.py"""
+        return self.web_service.get_catalog()
+
+    def process_web_purchase(self, product_id, client_id):
+        """Procesa la compra vinculándola al cliente."""
+        return self.web_service.process_purchase(product_id, client_id)
+    
+    def register_web_client(self, client_data):
+        """Registra un cliente desde la web y retorna su ID."""
+        return self.web_service.register_client(client_data)
