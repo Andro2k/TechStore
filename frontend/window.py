@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QStackedWidget)
 
 from frontend.pages.employees_page import EmployeesPage
 from frontend.pages.products_page import ProductsPage
+from frontend.pages.sucursales_page import SucursalesPage
 from .components import Sidebar
 from .theme import get_main_stylesheet
 from .pages.table_page import TablePage
@@ -66,7 +67,7 @@ class TechStoreWindow(QMainWindow):
         PAGE_CLASSES = {
             "PRODUCTO": ProductsPage,
             "EMPLEADO": EmployeesPage,
-            #"SUCURSAL": SucursalPage #(cuando la crees)
+            "SUCURSAL": SucursalesPage
         }
 
         for table_name in allowed_tables:
