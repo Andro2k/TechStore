@@ -1,5 +1,8 @@
 # web_app/app.py (Actualizado)
 
+import socket
+import tkinter as tk
+from tkinter import ttk
 import sys
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session
@@ -163,5 +166,61 @@ def login_view():
     return render_template('login.html')
 
 
+def get_ip_choices():
+    """Detecta las IPs disponibles en la computadora."""
+    ip_list = [("Localhost (Solo esta PC)", "127.0.0.1"), 
+               ("Todas las redes (Público)", "0.0.0.0")]
+    
+    try:
+        # Obtener el nombre del host
+        hostname = socket.gethostname()
+        # Obtener todas las IPs asociadas al host
+        _, _, ips = socket.gethostbyname_ex(hostname)
+        for ip in ips:
+            if ip != "127.0.0.1":
+                ip_list.append((f"Adaptador: {ip}", ip))
+    except Exception:
+        pass
+    
+    return ip_list
+
+def launch_selector():
+    """Muestra una ventana para elegir la IP."""
+    root = tk.Tk()
+    root.title("Configuración del Servidor")
+    root.geometry("350x180")
+    
+    # Variable para guardar la selección
+    selected_ip = tk.StringVar(value="127.0.0.1")
+    
+    tk.Label(root, text="Selecciona dónde ejecutar la web:", font=("Arial", 11, "bold")).pack(pady=10)
+    
+    # Dropdown (Combobox)
+    opciones = get_ip_choices()
+    # Crear lista de textos para mostrar
+    opciones_texto = [f"{txt} - {ip}" for txt, ip in opciones]
+    
+    combo = ttk.Combobox(root, values=opciones_texto, width=40, state="readonly")
+    combo.current(0) # Seleccionar el primero por defecto
+    combo.pack(pady=5)
+    
+    def on_confirm():
+        # Extraer la IP seleccionada del texto del combobox
+        index = combo.current()
+        if index >= 0:
+            selected_ip.set(opciones[index][1])
+        root.destroy()
+        
+    tk.Button(root, text="Iniciar Servidor", command=on_confirm, bg="#4CAF50", fg="white").pack(pady=20)
+    
+    root.mainloop()
+    return selected_ip.get()
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # 1. Abrir ventana de selección
+    host_ip = launch_selector()
+    
+    print(f"--> Iniciando servidor en: http://{host_ip}:5000")
+    
+    # 2. Iniciar Flask con la IP elegida
+    app.run(debug=True, host=host_ip, port=5000)
